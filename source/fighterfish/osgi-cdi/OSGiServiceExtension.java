@@ -96,7 +96,7 @@ public class OSGiServiceExtension implements Extension{
     private HashMap<Type, Set<InjectionPoint>> servicesToBeInjected
                                 = new HashMap<Type, Set<InjectionPoint>>();
     private static Logger logger = Logger.getLogger(OSGiServiceExtension.class.getPackage().getName());
-
+    
     //Observers for container lifecycle events
     void beforeBeanDiscovery(@Observes BeforeBeanDiscovery bdd){
         debug("beforeBeanDiscovery" + bdd);
@@ -132,65 +132,11 @@ public class OSGiServiceExtension implements Extension{
         //TangYong added
         Class<?> clazz = pb.getBean().getBeanClass();
         if (clazz.isAnnotationPresent(Publish.class)){
-        	registerOSGiService(clazz);
+        	OSGiServiceFactory.addPublishableClasses(clazz);      	
         }
         
         Set<InjectionPoint> ips = pb.getBean().getInjectionPoints();
         discoverServiceInjectionPoints(ips);
-    }
-
-    //TangYong Added
-    private void registerOSGiService(Class<?> clazz) {	 
-         Publish publish = clazz.getAnnotation(Publish.class);         
-         BundleContext bc = null;
-         try {
-             bc = BundleReference.class
-                             .cast(this.getClass().getClassLoader())
-                             .getBundle().getBundleContext();
-         } catch (ClassCastException cce) {
-             logger.log(Level.SEVERE,  "Expected @Publish annotated element {0} to be within an OSGi Bundle.", new Object[]{cce});
-             throw cce;
-         }
-         
-         //Temp Handling
-         Properties props = getServiceProperties(null);
-         props.setProperty("service.rank", String.valueOf(publish.rank()));
-         
-         Object service = null;
-         try {
-     		//ToDo: Temp Handling
-				service = clazz.newInstance();
-			} catch (InstantiationException e) {
-				e.printStackTrace();
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-			}
-         
-         int length = clazz.getInterfaces().length;
-         if (length > 0) {
-        	 String[] serviceInterfaces = new String[length];
-        	 for (int i = 0; i < length; i++) {
-        		 serviceInterfaces[i] = clazz.getInterfaces()[i].getName();
-        	 }
-        	        	 
-        	 bc.registerService(serviceInterfaces, service, props);
-         }else{
-        	 Class<?> superClazz = clazz.getClass().getSuperclass();
-        	 if ((superClazz != null) && (superClazz.equals(Object.class))){
-        		 bc.registerService(superClazz.getName(), service, props);
-        	 }else{
-        		 // publish service with the implementation type
-        		 bc.registerService(clazz.getName(), service, props);
-        	 }
-         }        
-	}
-    
-    //TangYong Added
-    private Properties getServiceProperties(List<Annotation> qualifiers){
-    	Properties props = new Properties();
-    	
-    	//ToDo: handle qualifiers
-    	return props;
     }
 
 	/*

@@ -40,17 +40,22 @@
 
 package org.glassfish.osgicdi.impl;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.enterprise.inject.spi.InjectionPoint;
 
 import org.glassfish.osgicdi.OSGiService;
+import org.glassfish.osgicdi.Publish;
 import org.glassfish.osgicdi.ServiceUnavailableException;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleReference;
@@ -59,6 +64,7 @@ import org.osgi.framework.Filter;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceException;
 import org.osgi.framework.ServiceReference;
+import org.osgi.framework.ServiceRegistration;
 import org.osgi.util.tracker.ServiceTracker;
 import org.osgi.util.tracker.ServiceTrackerCustomizer;
 
@@ -73,6 +79,9 @@ import org.osgi.util.tracker.ServiceTrackerCustomizer;
 class OSGiServiceFactory {
 
     private static Logger logger = Logger.getLogger(OSGiServiceFactory.class.getPackage().getName());
+    
+    //TangYong Added,maybe need to thread safety
+    private static List<Class<?>> publishedClasses = new ArrayList<Class<?>>();
 
     /**
      * Get a reference to the service of the provided <code>Type</code>
@@ -201,6 +210,66 @@ class OSGiServiceFactory {
         return bc;
     }
     
+    //TangYong Added
+    public static List<Class<?>> getPublishableClasses(){
+    	return publishedClasses;
+    }
+    
+    public static void addPublishableClasses(Class<?> clazz){
+    	publishedClasses.add(clazz);
+    }
+    
+    public static void clearPublishableClasses(){
+    	publishedClasses.clear();
+    }
+    
+  //TangYong Added
+    public static ServiceRegistration registerOSGiService(Class<?> clazz, BundleContext bc) {	 
+         Publish publish = clazz.getAnnotation(Publish.class);         
+         
+         //Temp Handling
+         Properties props = getServiceProperties(null);
+         props.setProperty("service.rank", String.valueOf(publish.rank()));
+         
+         Object service = null;
+         ServiceRegistration srg = null;
+         try {
+     		//ToDo: Temp Handling
+				service = clazz.newInstance();
+			} catch (InstantiationException e) {
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			}
+         
+         int length = clazz.getInterfaces().length;
+         if (length > 0) {
+        	 String[] serviceInterfaces = new String[length];
+        	 for (int i = 0; i < length; i++) {
+        		 serviceInterfaces[i] = clazz.getInterfaces()[i].getName();
+        	 }
+        	        	 
+        	 srg = bc.registerService(serviceInterfaces, service, props);
+         }else{
+        	 Class<?> superClazz = clazz.getClass().getSuperclass();
+        	 if ((superClazz != null) && (superClazz.equals(Object.class))){
+        		 srg = bc.registerService(superClazz.getName(), service, props);
+        	 }else{
+        		 // publish service with the implementation type
+        		 srg = bc.registerService(clazz.getName(), service, props);
+        	 }
+         }     
+         
+         return srg;
+	}
+    
+    //TangYong Added
+    private static Properties getServiceProperties(List<Annotation> qualifiers){
+    	Properties props = new Properties();
+    	
+    	//ToDo: handle qualifiers
+    	return props;
+    }
 
     /**
      * If the service is marked as dynamic, when a method is invoked on a
