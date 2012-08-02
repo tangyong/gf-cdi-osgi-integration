@@ -9,8 +9,10 @@ Glassfish CDI/OSGi Integration
 by using @Publish annotation, not using BundleActivator, on deploying or starting bundle,
 a osgi service can be registered.
 
-ToDo: currently, registering a osgi service happens on  deploying bundle, and I will finish  
-registering a osgi service on starting bundle.
+ToDo: 
+
+1 while using felix shell to install bundle with beans.xml, also making weld container to scan @Publish
+annotation and register osgi services.
 
 
 [Samples Building and Running]
@@ -27,6 +29,16 @@ registering a osgi service on starting bundle.
 - asadmin deploy --type=osgi stockquote_cdi_wab.war
 
 3) access "http://localhost:8080/stockquote/list"
+OK!
 
+4) telnet localhost 6666
+
+5) stop stockquote_service_usingcdi bundle (etc. stop 341)
+
+! stop 341
+
+6) access "http://localhost:8080/stockquote/list" again, at the moment, 
+if user starts 341 again within 30 seconds, stockquote_cdi_wab will be accessed
+successfully, otherwise, service will be unavailable.
 
  
