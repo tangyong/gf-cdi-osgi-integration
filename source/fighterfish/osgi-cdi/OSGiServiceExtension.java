@@ -100,10 +100,7 @@ public class OSGiServiceExtension implements Extension{
     //Observers for container lifecycle events
     void beforeBeanDiscovery(@Observes BeforeBeanDiscovery bdd){
         debug("beforeBeanDiscovery" + bdd);
-        bdd.addQualifier(OSGiService.class); //XXX:needed?
-        
-        //TangYong Added
-        bdd.addQualifier(Publish.class);      
+        bdd.addQualifier(OSGiService.class); //XXX:needed?  
     }
 
     /**

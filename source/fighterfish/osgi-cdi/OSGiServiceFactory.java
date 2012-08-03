@@ -55,6 +55,7 @@ import java.util.logging.Logger;
 import javax.enterprise.inject.spi.InjectionPoint;
 
 import org.glassfish.osgicdi.OSGiService;
+import org.glassfish.osgicdi.Property;
 import org.glassfish.osgicdi.Publish;
 import org.glassfish.osgicdi.ServiceUnavailableException;
 import org.osgi.framework.BundleContext;
@@ -225,11 +226,8 @@ class OSGiServiceFactory {
     
   //TangYong Added
     public static ServiceRegistration registerOSGiService(Class<?> clazz, BundleContext bc) {	 
-         Publish publish = clazz.getAnnotation(Publish.class);         
-         
-         //Temp Handling
-         Properties props = getServiceProperties(null);
-         props.setProperty("service.rank", String.valueOf(publish.rank()));
+            
+         Properties props = getServiceProperties(clazz);         
          
          Object service = null;
          ServiceRegistration srg = null;
@@ -264,11 +262,19 @@ class OSGiServiceFactory {
 	}
     
     //TangYong Added
-    private static Properties getServiceProperties(List<Annotation> qualifiers){
+    private static Properties getServiceProperties(Class<?> clazz){
     	Properties props = new Properties();
     	
-    	//ToDo: handle qualifiers
-    	return props;
+    	 Publish publish = clazz.getAnnotation(Publish.class);    
+         Property[] serviceProps = publish.value();
+         
+         for(Property prop : serviceProps){
+        	 props.setProperty(prop.name(), prop.value());
+         }
+         
+         props.setProperty("service.rank", String.valueOf(publish.rank()));
+    	
+    	 return props;
     }
 
     /**
