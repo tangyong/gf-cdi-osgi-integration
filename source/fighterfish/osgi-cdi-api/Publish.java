@@ -53,11 +53,12 @@ import static java.lang.annotation.ElementType.TYPE;
  * @author Tang Yong (tangyong@cn.fujitsu.com)
  */ 
 
-@Qualifier
 @Target({TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-
 public @interface Publish {
+	
+	Property[] value() default {};
+	
     /**
      * The rank of the service to find the best available service on lookups.
      *
