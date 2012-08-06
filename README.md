@@ -58,7 +58,7 @@ ToDo.
 * [High][GLASSFISH-15364] - CDI + OSGi config admin.
 * [High][GLASSFISH-18748] - An OSGi Service cannot be injected into a Stateful EJB.
 * [High][GLASSFISH-18836] - Regression: An OSGi Service cannot be injected into a JAX-RS resource.
-* [Mid][GLASSFISH-18896] - Allow criteria to be configurable in OSGiService. (Need to discuss with sahoo to understand mean of the RFE)
+* [Mid][GLASSFISH-18896] - Allow criteria to be configurable in OSGiService. (★★Need to discuss with sahoo to understand mean of the RFE)
 * [Low][GLASSFISH-18762] - @Named results in Ambiguous dependencies deployment failure in WAB.
 * [Low][GLASSFISH-15225] - CDI beans not accessible in web applications.
 * [Low][GLASSFISH-18514] - CDI does not get enabled on server start for a WAB bundle, the war has to be redeployed after the server starts for CDI to be enabled.
