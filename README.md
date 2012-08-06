@@ -75,7 +75,7 @@ ToDo.
 
 ## References
 
-* <RFP 146 - CDI integration Proposed Final Draft>
-* <WELD OSGi integration Design Specification>
+* RFP 146 - CDI integration Proposed Final Draft <https://www.osgi.org/bugzilla/show_bug.cgi?id=141>
+* WELD OSGi integration Design Specification <http://mathieuancelin.github.com/weld-osgi/>
 
 Tang Yong(tangyong@cn.fujitsu.com).
