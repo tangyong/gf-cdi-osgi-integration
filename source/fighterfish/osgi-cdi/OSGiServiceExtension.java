@@ -41,6 +41,7 @@
 package org.glassfish.osgicdi.impl;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -65,7 +66,6 @@ import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.InjectionPoint;
-import javax.enterprise.inject.spi.ProcessAnnotatedType;
 import javax.enterprise.inject.spi.ProcessBean;
 import javax.enterprise.inject.spi.ProcessInjectionTarget;
 import javax.enterprise.util.AnnotationLiteral;
@@ -73,11 +73,13 @@ import javax.enterprise.util.AnnotationLiteral;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleReference;
 import org.osgi.framework.ServiceException;
-import org.osgi.framework.ServiceRegistration;
 
 import org.glassfish.osgicdi.OSGiService;
 import org.glassfish.osgicdi.Publish;
+import org.glassfish.osgicdi.Service;
 import org.glassfish.osgicdi.ServiceUnavailableException;
+
+
 
 /**
  * A portable extension that supports discovery and injection of OSGi
@@ -100,7 +102,7 @@ public class OSGiServiceExtension implements Extension{
     //Observers for container lifecycle events
     void beforeBeanDiscovery(@Observes BeforeBeanDiscovery bdd){
         debug("beforeBeanDiscovery" + bdd);
-        bdd.addQualifier(OSGiService.class); //XXX:needed?  
+       // bdd.addQualifier(OSGiService.class); //XXX:needed?  
     }
 
     /**
@@ -145,6 +147,23 @@ public class OSGiServiceExtension implements Extension{
         for (Iterator<InjectionPoint> iterator = ips.iterator(); 
                                                     iterator.hasNext();) {
             InjectionPoint injectionPoint = iterator.next();
+            
+            //TangYong Added
+            boolean service = false;
+            
+            Type T = injectionPoint.getType();
+            
+            if ((T != null) && (T instanceof ParameterizedType)){
+            	 if (((ParameterizedType)T).getRawType().equals(Service.class)) {
+                     service = true;
+                }
+            }
+          
+            if (service){
+            	addServiceInjectionInfo(injectionPoint);
+              	continue;
+            }
+                       
             Set<Annotation> qualifs = injectionPoint.getQualifiers();
             for (Iterator<Annotation> qualifIter = qualifs.iterator(); 
                                                     qualifIter.hasNext();) {
@@ -175,7 +194,7 @@ public class OSGiServiceExtension implements Extension{
         }
     }
 
-    private void addServiceInjectionInfo(InjectionPoint injectionPoint) {
+	private void addServiceInjectionInfo(InjectionPoint injectionPoint) {
         Type key = injectionPoint.getType();
         if (!servicesToBeInjected.containsKey(key)){
             servicesToBeInjected.put(key, new CopyOnWriteArraySet<InjectionPoint>());
@@ -193,23 +212,57 @@ public class OSGiServiceExtension implements Extension{
         for (Iterator<Type> iterator = this.servicesToBeInjected.keySet().iterator(); 
                                                 iterator.hasNext();) {
             Type type =  iterator.next();
-            //If the injection point's type is not a Class or Interface, we
-            //don't know how to handle this. 
+           
             if (!(type instanceof Class)) {
-                //XXX: need to handle Instance<Class>. This fails currently
-                logger.logp(Level.WARNING, "OSGiServiceExtension", "afterBeanDiscovery",
-                        "Unknown type: {0}", new Object[]{type});
-                abd.addDefinitionError(new UnsupportedOperationException(
-                        "Injection target type " + type + "not supported"));
-                break; //abort deployment
+            	
+            	//TangYong Added
+            	if ((type instanceof ParameterizedType) && (((ParameterizedType)type)).getRawType().equals(Service.class)){
+            		//Handle Service<T> Case
+            		addServiceProducer(abd, this.servicesToBeInjected.get(type));
+               		continue;
+            	}else{
+            		//Unknown type Handling
+                    logger.logp(Level.WARNING, "OSGiServiceExtension", "afterBeanDiscovery",
+                            "Unknown type: {0}", new Object[]{type});
+                    abd.addDefinitionError(new UnsupportedOperationException(
+                            "Injection target type " + type + "not supported"));
+                    break; //abort deployment
+            	}
             }
+            
             //Add the Bean representing the framework service so that it
             //is available for injection
             addBean(abd, type, this.servicesToBeInjected.get(type));
         }
     }
 
-    /*
+    //TangYong Added
+    private void addServiceProducer(AfterBeanDiscovery abd,
+			Set<InjectionPoint> set) {
+    	Set<OSGiServiceProducerBean> beans = new HashSet<OSGiServiceProducerBean>();
+        for (Iterator<InjectionPoint> iterator = set.iterator();
+                iterator.hasNext();) {
+            final InjectionPoint injectionPoint = iterator.next();
+            Class annotatedElt = injectionPoint.getMember().getDeclaringClass();
+            BundleContext bc = null;
+            try {
+                bc = BundleReference.class
+                                .cast(annotatedElt.getClassLoader())
+                                .getBundle().getBundleContext();
+            } catch (ClassCastException cce) {
+                logger.logp(Level.SEVERE, "OSGiServiceExtension", "addServiceProducer",
+                        "Expected annotated element {0} to be within an OSGi Bundle.", new Object[]{cce});
+                throw cce;
+            }
+            beans.add(new OSGiServiceProducerBean(injectionPoint, bc));
+        }
+        
+        for (OSGiServiceProducerBean bean : beans) {
+            abd.addBean(bean);
+        }		
+	}
+
+	/*
      * Add a <code>Bean</code> for the framework service requested. Instantiate
      * or discover the bean from the framework service registry, 
      * and return a reference to the service if a dynamic reference is requested.

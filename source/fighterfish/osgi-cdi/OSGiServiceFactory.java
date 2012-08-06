@@ -227,7 +227,7 @@ class OSGiServiceFactory {
   //TangYong Added
     public static ServiceRegistration registerOSGiService(Class<?> clazz, BundleContext bc) {	 
             
-         Properties props = getServiceProperties(clazz);         
+         Properties props = getServiceProperties(clazz);
          
          Object service = null;
          ServiceRegistration srg = null;
@@ -271,9 +271,7 @@ class OSGiServiceFactory {
          for(Property prop : serviceProps){
         	 props.setProperty(prop.name(), prop.value());
          }
-         
-         props.setProperty("service.rank", String.valueOf(publish.rank()));
-    	
+                   	
     	 return props;
     }
 
