@@ -56,13 +56,5 @@ import static java.lang.annotation.ElementType.TYPE;
 @Target({TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Publish {
-	
 	Property[] value() default {};
-	
-    /**
-     * The rank of the service to find the best available service on lookups.
-     *
-     * @return the rank of the service. Default is 0.
-     */
-    int rank() default 0;
 }
