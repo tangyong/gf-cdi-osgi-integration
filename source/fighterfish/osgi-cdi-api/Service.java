@@ -74,6 +74,10 @@ public interface Service<T> extends Iterable<T> {
      * @return a subset of the service implementations as another {@link Service}.
      */
     Service<T> select(String filter);
+    
+    void add(T service);
+    
+    void remove(T service);
 
     /**
      * Test if there is no available implementation.
