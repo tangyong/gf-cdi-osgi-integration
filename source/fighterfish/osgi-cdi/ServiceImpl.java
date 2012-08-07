@@ -189,4 +189,13 @@ public class ServiceImpl<T> implements Service<T> {
         };
     }
 
+	@Override
+	public void add(T service) {
+		services.add(service);		
+	}
+
+	@Override
+	public void remove(T service) {
+		services.remove(service);		
+	}
 }

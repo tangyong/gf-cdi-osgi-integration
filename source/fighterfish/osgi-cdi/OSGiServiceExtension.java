@@ -49,7 +49,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.Level;
@@ -63,11 +62,13 @@ import javax.enterprise.inject.CreationException;
 import javax.enterprise.inject.Default;
 import javax.enterprise.inject.spi.AfterBeanDiscovery;
 import javax.enterprise.inject.spi.Bean;
+import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.InjectionPoint;
 import javax.enterprise.inject.spi.ProcessBean;
 import javax.enterprise.inject.spi.ProcessInjectionTarget;
+import javax.enterprise.inject.spi.ProcessObserverMethod;
 import javax.enterprise.util.AnnotationLiteral;
 
 import org.osgi.framework.BundleContext;
@@ -77,9 +78,8 @@ import org.osgi.framework.ServiceException;
 import org.glassfish.osgicdi.OSGiService;
 import org.glassfish.osgicdi.Publish;
 import org.glassfish.osgicdi.Service;
+import org.glassfish.osgicdi.ServiceFilter;
 import org.glassfish.osgicdi.ServiceUnavailableException;
-
-
 
 /**
  * A portable extension that supports discovery and injection of OSGi
@@ -88,6 +88,7 @@ import org.glassfish.osgicdi.ServiceUnavailableException;
  * 
  * @see OSGiService
  * @author Sivakumar Thyagarajan
+ * @author Tang Yong (tangyong@cn.fujitsu.com)
  */
 public class OSGiServiceExtension implements Extension{
 
@@ -99,11 +100,29 @@ public class OSGiServiceExtension implements Extension{
                                 = new HashMap<Type, Set<InjectionPoint>>();
     private static Logger logger = Logger.getLogger(OSGiServiceExtension.class.getPackage().getName());
     
+    //TangYong Added
+    private static List<Annotation> qualifiersOfObservers = new ArrayList<Annotation>();
+    private static BeanManager beanManager;
+    
     //Observers for container lifecycle events
-    void beforeBeanDiscovery(@Observes BeforeBeanDiscovery bdd){
+    //Tang Yong Added
+    void beforeBeanDiscovery(@Observes BeforeBeanDiscovery bdd, BeanManager manager){
         debug("beforeBeanDiscovery" + bdd);
        // bdd.addQualifier(OSGiService.class); //XXX:needed?  
+       
+       //TangYong Added
+        beanManager = manager;
     }
+    
+    //Tang Yong Added
+    public static BeanManager getBeanManager(){
+    	return beanManager;
+    }
+    
+    //TangYong Added
+    public static List<Annotation> getObservers() {
+        return qualifiersOfObservers;
+    } 
 
     /**
      * Observer for <code>ProcessInjectionTarget</code> events. This event is
@@ -262,6 +281,17 @@ public class OSGiServiceExtension implements Extension{
         }		
 	}
 
+    //TangYong Added
+    void registerObservers(@Observes ProcessObserverMethod<?, ?> event) {
+        debug("Observe a ProcessObserverMethod event");
+        Set<Annotation> qualifiers = event.getObserverMethod().getObservedQualifiers();
+        for (Annotation qualifier : qualifiers) {
+            if (qualifier.annotationType().equals(ServiceFilter.class)) {
+                qualifiersOfObservers.add(qualifier);
+            }
+        }
+    }
+    
 	/*
      * Add a <code>Bean</code> for the framework service requested. Instantiate
      * or discover the bean from the framework service registry, 

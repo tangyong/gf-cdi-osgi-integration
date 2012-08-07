@@ -40,21 +40,31 @@
 
 package org.glassfish.osgicdi.impl;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.InjectionPoint;
 
+import org.glassfish.osgicdi.AbstractCDIOSGiServiceEvent;
+import org.glassfish.osgicdi.CDIOSGiServiceEvents;
 import org.glassfish.osgicdi.OSGiService;
+import org.glassfish.osgicdi.ServiceFilter;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceListener;
+import org.osgi.framework.ServiceReference;
 import org.osgi.framework.ServiceRegistration;
 import org.osgi.framework.SynchronousBundleListener;
 
@@ -67,7 +77,7 @@ import org.osgi.framework.SynchronousBundleListener;
  * @author Tang Yong(tangyong@cn.fujitsu.com)
  */
 public class OSGiServiceExtensionActivator implements BundleActivator,
-		SynchronousBundleListener {
+		SynchronousBundleListener, ServiceListener {
 	
 	private static Logger logger = Logger
 			.getLogger(OSGiServiceExtensionActivator.class.getPackage()
@@ -184,5 +194,77 @@ public class OSGiServiceExtensionActivator implements BundleActivator,
 
 			break;
 		}
+	}
+
+	@Override
+	public void serviceChanged(ServiceEvent event) {
+		ServiceReference ref = event.getServiceReference();
+		AbstractCDIOSGiServiceEvent serviceEvent = null;
+        switch(event.getType()) {
+            case ServiceEvent.REGISTERED:
+                logger.log(Level.INFO,"Receiving a new OSGi service event REGISTERED");
+                serviceEvent = new CDIOSGiServiceEvents.CDIOSGiServiceRegistered(ref, context);
+                break;
+            case ServiceEvent.UNREGISTERING:
+            	logger.log(Level.INFO,"Receiving a new OSGi service event UNREGISTERING");
+                serviceEvent = new CDIOSGiServiceEvents.CDIOSGiServiceUnRegistered(ref, context);
+                break;
+        }
+       
+        try {
+            //broadcast the OSGi event through CDI event system
+        	BeanManager beanManager = OSGiServiceExtension.getBeanManager();
+        	if (beanManager != null){
+        		//To investigate why?
+        		beanManager.fireEvent(event);
+        	}            
+        }
+        catch(Throwable t) {
+            t.printStackTrace();
+        }
+        if (serviceEvent != null) {
+            //broadcast the corresponding Weld-OSGi event
+            fireCDIOSGiServiceEvent(serviceEvent);
+        }	
+	}
+
+	private void fireCDIOSGiServiceEvent(
+			AbstractCDIOSGiServiceEvent serviceEvent) {
+		 List<Class<?>> classes = serviceEvent.getServiceClasses(getClass());
+         Class eventClass = serviceEvent.getClass();
+         BeanManager beanManager = OSGiServiceExtension.getBeanManager();
+         for (Class<?> clazz : classes) {
+             try {
+                 Annotation[] qualifs = filteredCDIOSGiServicesQualifiers(serviceEvent,
+                       new CDIOSGiEventFilterAnnotation(clazz));
+                 if (beanManager != null){
+                	 beanManager.fireEvent(serviceEvent, qualifs);
+                 }
+             }
+             catch(Throwable t) {
+                 t.printStackTrace();
+             }
+         }
+		
+	}
+
+	private Annotation[] filteredCDIOSGiServicesQualifiers(
+			AbstractCDIOSGiServiceEvent serviceEvent,
+			CDIOSGiEventFilterAnnotation cdiosGiEventFilterAnnotation) {
+		Set<Annotation> eventQualifiers = new HashSet<Annotation>();
+        eventQualifiers.add(cdiosGiEventFilterAnnotation);
+        for (Annotation annotation : OSGiServiceExtension.getObservers()) {
+            String value = ((ServiceFilter)annotation).value();
+            try {
+                org.osgi.framework.Filter filter = context.createFilter(value);
+                if (filter.match(serviceEvent.getReference())) {
+                    eventQualifiers.add(new ServiceFilterAnnotation(value));
+                }
+            }
+            catch(InvalidSyntaxException ex) {
+                ex.printStackTrace();
+            }
+        }
+        return eventQualifiers.toArray(new Annotation[eventQualifiers.size()]);
 	}
 }
