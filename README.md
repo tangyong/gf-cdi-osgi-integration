@@ -38,6 +38,7 @@ ToDo.
 * samples/[RFP146]CDI014 : combine @Publish with @Property
 * samples/[RFP146]CDI018 : simple use of Service<T> 
 * samples/[RFP146]CDI004 : combine Service<T> with @ServiceFilter
+* samples/[RFP146]CDI021 : CDI/OSGi Event Integration
 
 ## New Implemented Features
 
@@ -50,9 +51,12 @@ ToDo.
 
 * [GLASSFISH-18370] - OSGi Services injected with CDI have their exceptions wrapped..
 
+## Doing List
+
+* [GLASSFISH-17155] - CDI Events don't work when fired by a OSGi ServiceListener.
+
 ## To Do List (By Priority)
 
-* [High][GLASSFISH-17155] - CDI Events don't work when fired by a OSGi ServiceListener.
 * [High][GLASSFISH-15265] - Allow callbacks on service lifecycle events in @OSGiService.
 * [High][GLASSFISH-15365] - CDI + OSGi event admin.
 * [High][GLASSFISH-15364] - CDI + OSGi config admin.
