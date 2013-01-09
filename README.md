@@ -1,7 +1,11 @@
 Glassfish CDI/OSGi Integration
 ==========================
 
-Thanks for looking into Glassfish CDI/OSGi Integration. 
+Glassfish CDI/OSGi Integration is in progress and currently, glassfish is reviewing my patch，
+and I believe that on 2013, some important features will be added into glassfish.
+
+Note: the repo's sources has been too old, and I will spend some time to update them, and please
+waiting....
 
 This is the contribution of Glassfish fighterfish/moudle/osgi-cdi project.
 Its licensed under CDDL+GPL Licenses by Oracle Glassfish community.
